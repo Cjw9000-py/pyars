@@ -17,11 +17,9 @@ class CleanArguments:
 class ConsoleArguments:
     root: Path
     command: Arguments = command(
+        extra={},
         build=BuildArguments,
         clean=CleanArguments,
-        extra={
-            'your-mom': BuildArguments
-        }
     )
 
 def main() -> None:
