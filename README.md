@@ -38,3 +38,13 @@ if __name__ == "__main__":
     print(parsed_args)
 
 ```
+
+## Experiment: tool usage with Ollama
+
+The `experiments/ollama_tool_usage.py` script shows how to request a tool call using the raw generation endpoint. Start an Ollama server locally and run:
+
+```bash
+python experiments/ollama_tool_usage.py
+```
+
+The script prints the raw JSON response so you can inspect how the model attempts to invoke the tool.
