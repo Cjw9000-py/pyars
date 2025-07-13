@@ -2,7 +2,7 @@
 
 ## Installation
 
-To install `my-project`, follow these steps:
+To install `pyars`, follow these steps:
 
 1. Clone the repository:
 ```bash
