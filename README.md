@@ -14,6 +14,8 @@ cd pyars
 pip install .
 ```
 
+To run the test suite, install dependencies from `requirements.txt` and execute `pytest`.
+
 ## Usage
 
 You can also check the `example.py` in the root of the project.
