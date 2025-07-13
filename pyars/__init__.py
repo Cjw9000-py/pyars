@@ -1,14 +1,14 @@
-from .impl import (
-    arguments,
+from __future__ import annotations
+
+from pathlib import Path
+
+from .container import arguments, ArgumentContainer as Arguments
+from .argument_types import (
     CommandArgument as command,
     PositionalArgument as positional,
     FlagArgument as flag,
     SwitchArgument as switch,
-    ArgumentContainer as Arguments
 )
-
-from pathlib import Path
-
 
 __all__ = [
     'arguments',
