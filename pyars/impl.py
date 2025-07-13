@@ -342,8 +342,6 @@ class ArgumentContainer:
 
     @classmethod
     def parse_args(cls, argv: list[str] = None) -> Self:
-        if argv is None:
-            argv = sys.argv
 
         parser = cls.new_parser()
         namespace = parser.parse_args(argv)
