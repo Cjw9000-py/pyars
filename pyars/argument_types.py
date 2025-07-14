@@ -13,7 +13,6 @@ from types import GenericAlias, SimpleNamespace, UnionType
 from typing import Callable, get_type_hints
 from argparse import ArgumentParser, Namespace
 from enum import Enum
-from distutils.util import strtobool
 import os
 from attrs import Attribute, NOTHING
 
