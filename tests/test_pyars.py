@@ -1,4 +1,5 @@
 from pathlib import Path
+from argparse import ArgumentParser
 
 from pyars import arguments, positional, flag, switch, command, Arguments
 
@@ -33,7 +34,7 @@ def test_build_parse_defaults():
     argv = ['proj1']
     parsed = BuildArguments.parse_args(argv)
     assert parsed.projects == {'proj1'}
-    assert parsed.root == 'cwd'
+    assert parsed.root == Path('cwd')
     assert parsed.verbose is False
     assert parsed.parallel == 1
     assert parsed.colorize_output is False
@@ -79,3 +80,17 @@ def test_command_clean():
     parsed = ConsoleArguments.parse_args(argv)
     assert isinstance(parsed.command, CleanArguments)
     assert parsed.command.force is True
+
+
+def test_new_parser_callback_and_kwargs():
+    captured: list[ArgumentParser] = []
+
+    def customize(parser: ArgumentParser) -> None:
+        captured.append(parser)
+        parser.add_argument('--extra', action='store_true')
+
+    parser = BuildArguments.new_parser(callbacks=customize, description='desc')
+    assert parser.description == 'desc'
+    namespace = parser.parse_args(['proj', '--extra'])
+    assert captured[0] is parser
+    assert namespace.extra is True
