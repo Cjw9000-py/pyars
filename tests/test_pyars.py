@@ -130,6 +130,15 @@ def test_command_clean():
     assert parsed.command.force is True
 
 
+@arguments
+class NoneDefaultArguments:
+    flag_arg: str | None = flag(default=None)
+
+
+def test_flag_default_none_optional():
+    parsed = NoneDefaultArguments.parse_args([])
+    assert parsed.flag_arg is None
+    
 def test_new_parser_callback_and_kwargs():
     captured: list[ArgumentParser] = []
 
