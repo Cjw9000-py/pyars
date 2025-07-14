@@ -12,6 +12,9 @@ from pathlib import Path
 from types import GenericAlias, UnionType
 from typing import Callable
 from argparse import ArgumentParser, Namespace
+from enum import Enum
+from distutils.util import strtobool
+import os
 from attrs import Attribute, NOTHING
 
 from .container import ArgumentContainer
@@ -93,11 +96,41 @@ class CommandArgument(ArgumentType):
 class ValueArgument(ArgumentType):
     """Argument that holds one or more primitive values."""
 
-    def __init__(self, nargs: str | None = None, type: type | Callable | None = None, help: str | None = None):  # noqa
+    def __init__(
+        self,
+        nargs: str | None = None,
+        type: type | Callable | None = None,
+        *,
+        env_var: str | None = None,
+        help: str | None = None,
+    ) -> None:  # noqa: D401
         """Create a value argument."""
         self.nargs = nargs
         self.type = type
         self.help = help
+        self.env_var = env_var
+
+    def get_env_default(self, attr: Attribute):
+        if self.env_var is None:
+            return NOTHING
+        raw = os.getenv(self.env_var)
+        if raw is None:
+            return NOTHING
+        conv = self.get_converter(attr)
+        if conv is None:
+            return raw
+        try:
+            return conv(raw)
+        except Exception as exc:  # pragma: no cover - unlikely
+            raise ValueError(
+                f"Invalid value for environment variable {self.env_var}: {raw}"
+            ) from exc
+
+    def resolve_default(self, attr: Attribute, fallback: object = NOTHING) -> object:
+        env_default = self.get_env_default(attr)
+        if env_default is not NOTHING:
+            return env_default
+        return fallback
 
     def guess_converter(self, s: str) -> type | Callable | None:
         """Best-effort guess for a converter based on a string annotation."""
@@ -157,6 +190,9 @@ class ValueArgument(ArgumentType):
             kwargs['type'] = converter
         if self.help is not None:
             kwargs['help'] = self.help
+        env_default = self.get_env_default(attr)
+        if env_default is not NOTHING:
+            kwargs['default'] = env_default
         return kwargs
 
     def add_argument(self, prefix: str, attr: Attribute, parser: ArgumentParser):
@@ -195,9 +231,18 @@ class PositionalArgument(ValueArgument):
 class FlagArgument(ValueArgument):
     """Named command line flag that yields a value."""
 
-    def __init__(self, *opts: str, nargs: str | None = None, type: type | Callable | None = None, default: object = NOTHING, extra_opts: list[str] | set[str] | tuple[str] | str | None = None, help: str | None = None):  # noqa
+    def __init__(
+        self,
+        *opts: str,
+        nargs: str | None = None,
+        type: type | Callable | None = None,
+        default: object = NOTHING,
+        extra_opts: list[str] | set[str] | tuple[str] | str | None = None,
+        env_var: str | None = None,
+        help: str | None = None,
+    ):  # noqa: D401
         """Create a flag argument."""
-        super().__init__(nargs=nargs, type=type, help=help)
+        super().__init__(nargs=nargs, type=type, env_var=env_var, help=help)
         self.default = default
         self.opts = opts
         if extra_opts is not None:
@@ -229,6 +274,8 @@ class FlagArgument(ValueArgument):
         if self.default is not NOTHING:
             kwargs['default'] = self.default
             kwargs['required'] = False
+        elif 'default' in kwargs:
+            kwargs['required'] = False
         else:
             kwargs['required'] = True
         return kwargs
@@ -237,9 +284,19 @@ class FlagArgument(ValueArgument):
 class SwitchArgument(ValueArgument):
     """Boolean flag that supports ``--feature``/``--no-feature`` style switches."""
 
-    def __init__(self, name: str | None = None, enable: bool = True, disable: bool = True, default: bool = False, help_suffix: str | None = None, help: str | None = None):  # noqa
+    def __init__(
+        self,
+        name: str | None = None,
+        enable: bool = True,
+        disable: bool = True,
+        default: bool = False,
+        *,
+        env_var: str | None = None,
+        help_suffix: str | None = None,
+        help: str | None = None,
+    ) -> None:  # noqa: D401
         """Create a switch argument."""
-        super().__init__(help=help)
+        super().__init__(env_var=env_var, help=help)
         self.name = name
         self.enable = enable
         self.disable = disable
@@ -250,12 +307,13 @@ class SwitchArgument(ValueArgument):
         """Register ``--flag`` and/or ``--no-flag`` options."""
         name = self.name if self.name is not None else self.to_console_name(attr.name)
         dest = f"{prefix}{attr.name}"
+        default = self.resolve_default(attr, self.default)
         if self.enable:
             parser.add_argument(
                 f"--{name}",
                 dest=dest,
                 action='store_true',
-                default=self.default,
+                default=default,
                 help=self.help if self.help else f"Enable {self.help_suffix}",
             )
         if self.disable:
@@ -263,6 +321,72 @@ class SwitchArgument(ValueArgument):
                 f"--no-{name}",
                 dest=dest,
                 action='store_false',
-                default=self.default,
+                default=default,
                 help=self.help if self.help else f"Disable {self.help_suffix}",
             )
+
+
+class EnumArgument(FlagArgument):
+    """Flag that accepts only values from a specific :class:`Enum`."""
+
+    def __init__(
+        self,
+        enum: type[Enum],
+        *opts: str,
+        default: Enum | object = NOTHING,
+        extra_opts: list[str] | set[str] | tuple[str] | str | None = None,
+        env_var: str | None = None,
+        help: str | None = None,
+    ) -> None:
+        self.enum = enum
+        super().__init__(*opts, default=default, extra_opts=extra_opts, env_var=env_var, help=help)
+
+    def get_converter(self, attr: Attribute):
+        def convert(value: str | Enum) -> Enum:
+            if isinstance(value, self.enum):
+                return value
+            try:
+                return self.enum[value]
+            except KeyError:
+                try:
+                    return self.enum(value)
+                except Exception as exc:
+                    allowed = ', '.join(m.name for m in self.enum)
+                    raise ValueError(f"Expected one of {allowed}, got {value}") from exc
+
+        return convert
+
+    def get_kwargs(self, prefix: str, attr: Attribute) -> dict[str, object]:
+        kwargs = super().get_kwargs(prefix, attr)
+        kwargs['choices'] = list(self.enum)
+        return kwargs
+
+
+class ListArgument(FlagArgument):
+    """Flag accepting a delimiter-separated sequence."""
+
+    def __init__(
+        self,
+        *opts: str,
+        delimiter: str = ',',
+        item_type: Callable | type | None = str,
+        container: type[list] | type[set] = list,
+        default: object = NOTHING,
+        extra_opts: list[str] | set[str] | tuple[str] | str | None = None,
+        env_var: str | None = None,
+        help: str | None = None,
+    ) -> None:
+        super().__init__(*opts, type=None, default=default, extra_opts=extra_opts, env_var=env_var, help=help)
+        self.delimiter = delimiter
+        self.item_type = item_type
+        self.container = container
+
+    def get_converter(self, attr: Attribute):
+        def convert(value: str) -> object:
+            items = [] if value == '' else value.split(self.delimiter)
+            conv = self.item_type
+            if conv:
+                items = [conv(v) for v in items]
+            return self.container(items)
+
+        return convert
