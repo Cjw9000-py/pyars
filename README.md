@@ -1,4 +1,5 @@
 # pyars - a simple wrapper for argparse.
+Packaging is managed with `pyproject.toml` (PEP 621). The only runtime dependency is [`attrs`](https://www.attrs.org/), installed automatically by `pip`.
 
 ## Installation
 
@@ -39,6 +40,14 @@ if __name__ == "__main__":
 
 ```
 
+## Contributing
+
+Install dependencies, including `attrs`, and run the test suite:
+
+```bash
+pip install -r requirements.txt
+pytest
+=======
 ### Validation
 
 Providing conflicting switches raises an ``InvalidArgumentsError``:
