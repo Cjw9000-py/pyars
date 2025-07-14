@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+"""Public package interface for ``pyars``."""
+
 from pathlib import Path
 
 from .container import arguments, ArgumentContainer as Arguments
