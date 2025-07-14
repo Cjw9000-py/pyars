@@ -111,7 +111,11 @@ def arguments(outer_cls: type | None = None, **kwargs) -> type[ArgumentContainer
     """Decorate a class to become an ``ArgumentContainer``."""
     def wrapper(cls: type) -> type[ArgumentContainer]:
         cls = define(**kwargs)(cls)
-        mixed_type: type[ArgumentContainer] = type(cls.__name__, (cls, ArgumentContainer), {})
+        mixed_type: type[ArgumentContainer] = type(
+            cls.__name__,
+            (cls, ArgumentContainer),
+            {'__module__': cls.__module__},
+        )
         return mixed_type
 
     if outer_cls is None:
