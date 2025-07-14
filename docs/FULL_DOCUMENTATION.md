@@ -1,5 +1,7 @@
 # pyars Documentation
 
+pyars relies on the [`attrs`](https://www.attrs.org/) package. It is installed automatically when you install pyars.
+
 `pyars` is a lightweight wrapper around `argparse` that lets you declare command
 line interfaces using `attrs` classes. Fields are annotated with special
 argument descriptors which control how each attribute is parsed.
