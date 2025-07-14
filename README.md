@@ -1,4 +1,5 @@
 # pyars - a simple wrapper for argparse.
+Packaging is managed with `pyproject.toml` (PEP 621). The only runtime dependency is [`attrs`](https://www.attrs.org/), installed automatically by `pip`.
 
 ## Installation
 
@@ -22,7 +23,8 @@ You can also check the `example.py` in the root of the project.
 The usage is straightforward.
 
 ```python
-from pyars import *
+from pathlib import Path
+from pyars import arguments, positional, flag, switch, command, Arguments
 
 @arguments
 class BuildArguments:
@@ -37,4 +39,20 @@ if __name__ == "__main__":
     parsed_args = BuildArguments.parse_args()
     print(parsed_args)
 
+```
+
+## Contributing
+
+Install dependencies, including `attrs`, and run the test suite:
+
+```bash
+pip install -r requirements.txt
+pytest
+=======
+### Validation
+
+Providing conflicting switches raises an ``InvalidArgumentsError``:
+
+```python
+BuildArguments.parse_args(['proj', '--verbose', '--no-verbose'])
 ```

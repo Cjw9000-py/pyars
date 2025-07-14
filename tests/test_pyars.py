@@ -1,6 +1,18 @@
 from pathlib import Path
+from enum import Enum
+from argparse import ArgumentParser
+import pytest
 
-from pyars import arguments, positional, flag, switch, command, Arguments
+from pyars import (
+    arguments,
+    positional,
+    flag,
+    switch,
+    command,
+    enum,
+    list_argument,
+    Arguments,
+)
 
 
 @arguments
@@ -54,6 +66,43 @@ class ConsoleArguments:
     )
 
 
+class Mode(Enum):
+    debug = 1
+    release = 2
+
+
+@arguments
+class ExtraArguments:
+    mode: Mode = enum(Mode)
+    tags: list[str] = list_argument(env_var='EXTRA_TAGS', container=list)
+
+
+@arguments
+class EnvArguments:
+    count: int = flag(type=int, env_var='COUNT_VAR')
+    enabled: bool = switch(env_var='SWITCH_VAR')
+
+
+def test_enum_argument():
+    argv = ['--mode', 'debug', '--tags', 'x']
+    parsed = ExtraArguments.parse_args(argv)
+    assert parsed.mode is Mode.debug
+
+
+def test_list_argument_with_env_default(monkeypatch):
+    monkeypatch.setenv('EXTRA_TAGS', 'a,b,c')
+    parsed = ExtraArguments.parse_args(['--mode', 'release'])
+    assert parsed.tags == ['a', 'b', 'c']
+
+
+def test_env_defaults(monkeypatch):
+    monkeypatch.setenv('COUNT_VAR', '7')
+    monkeypatch.setenv('SWITCH_VAR', 'true')
+    parsed = EnvArguments.parse_args([])
+    assert parsed.count == 7
+    assert parsed.enabled is True
+
+
 def test_command_build():
     argv = [
         'some/root',
@@ -89,3 +138,22 @@ class NoneDefaultArguments:
 def test_flag_default_none_optional():
     parsed = NoneDefaultArguments.parse_args([])
     assert parsed.flag_arg is None
+    
+def test_new_parser_callback_and_kwargs():
+    captured: list[ArgumentParser] = []
+
+    def customize(parser: ArgumentParser) -> None:
+        captured.append(parser)
+        parser.add_argument('--extra', action='store_true')
+
+    parser = BuildArguments.new_parser(callbacks=customize, description='desc')
+    assert parser.description == 'desc'
+    namespace = parser.parse_args(['proj', '--extra'])
+    assert captured[0] is parser
+    assert namespace.extra is True
+    
+    
+def test_switch_conflict():
+    argv = ['proj', '--verbose', '--no-verbose']
+    with pytest.raises(InvalidArgumentsError):
+        BuildArguments.parse_args(argv)
