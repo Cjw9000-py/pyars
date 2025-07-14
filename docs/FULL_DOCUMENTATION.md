@@ -33,3 +33,33 @@ Running `BuildArgs.parse_args()` returns an instance populated from
 
 Refer to `example.py` for a full usage example.
 
+## Advanced Usage
+
+`ArgumentContainer.new_parser()` can be customised further by supplying
+additional `ArgumentParser` options or a callback. Extra positional or keyword
+arguments are forwarded directly to `ArgumentParser` while callbacks receive the
+fully configured parser for modification:
+
+```python
+def with_debug(parser: ArgumentParser) -> None:
+    parser.add_argument('--debug', action='store_true')
+
+parser = BuildArgs.new_parser(
+    callbacks=with_debug,
+    description='Build projects',
+)
+args = parser.parse_args(['proj', '--debug'])
+```
+
+The callback gets access to the parser instance so any additional options or
+settings remain active when parsing command lines.
+
+## Validation
+
+Containers perform a validation pass before parsing. Using mutually
+exclusive switches results in ``InvalidArgumentsError``:
+
+```python
+BuildArgs.parse_args(['proj', '--verbose', '--no-verbose'])
+```
+
