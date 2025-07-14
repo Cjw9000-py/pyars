@@ -38,3 +38,11 @@ if __name__ == "__main__":
     print(parsed_args)
 
 ```
+
+### Validation
+
+Providing conflicting switches raises an ``InvalidArgumentsError``:
+
+```python
+BuildArguments.parse_args(['proj', '--verbose', '--no-verbose'])
+```
