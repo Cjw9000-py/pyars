@@ -1,6 +1,16 @@
 from pathlib import Path
+from enum import Enum
 
-from pyars import arguments, positional, flag, switch, command, Arguments
+from pyars import (
+    arguments,
+    positional,
+    flag,
+    switch,
+    command,
+    enum,
+    list_argument,
+    Arguments,
+)
 
 
 @arguments
@@ -33,7 +43,7 @@ def test_build_parse_defaults():
     argv = ['proj1']
     parsed = BuildArguments.parse_args(argv)
     assert parsed.projects == {'proj1'}
-    assert parsed.root == 'cwd'
+    assert parsed.root == Path('cwd')
     assert parsed.verbose is False
     assert parsed.parallel == 1
     assert parsed.colorize_output is False
@@ -52,6 +62,43 @@ class ConsoleArguments:
         build=BuildArguments,
         clean=CleanArguments,
     )
+
+
+class Mode(Enum):
+    debug = 1
+    release = 2
+
+
+@arguments
+class ExtraArguments:
+    mode: Mode = enum(Mode)
+    tags: list[str] = list_argument(env_var='EXTRA_TAGS', container=list)
+
+
+@arguments
+class EnvArguments:
+    count: int = flag(type=int, env_var='COUNT_VAR')
+    enabled: bool = switch(env_var='SWITCH_VAR')
+
+
+def test_enum_argument():
+    argv = ['--mode', 'debug', '--tags', 'x']
+    parsed = ExtraArguments.parse_args(argv)
+    assert parsed.mode is Mode.debug
+
+
+def test_list_argument_with_env_default(monkeypatch):
+    monkeypatch.setenv('EXTRA_TAGS', 'a,b,c')
+    parsed = ExtraArguments.parse_args(['--mode', 'release'])
+    assert parsed.tags == ['a', 'b', 'c']
+
+
+def test_env_defaults(monkeypatch):
+    monkeypatch.setenv('COUNT_VAR', '7')
+    monkeypatch.setenv('SWITCH_VAR', 'true')
+    parsed = EnvArguments.parse_args([])
+    assert parsed.count == 7
+    assert parsed.enabled is True
 
 
 def test_command_build():

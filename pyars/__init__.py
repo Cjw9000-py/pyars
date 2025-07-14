@@ -10,6 +10,8 @@ from .argument_types import (
     PositionalArgument as positional,
     FlagArgument as flag,
     SwitchArgument as switch,
+    EnumArgument as enum,
+    ListArgument as list_argument,
 )
 
 __all__ = [
@@ -18,6 +20,8 @@ __all__ = [
     'positional',
     'flag',
     'switch',
+    'enum',
+    'list_argument',
     'Arguments',
     'Path',
 ]
