@@ -12,6 +12,7 @@ from pyars import (
     enum,
     list_argument,
     Arguments,
+    InvalidArgumentsError,
 )
 
 
