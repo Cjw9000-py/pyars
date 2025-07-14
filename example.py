@@ -1,6 +1,8 @@
 """Example demonstrating basic usage of :mod:`pyars`."""
 
-from pyars import *
+from pathlib import Path
+
+from pyars import arguments, positional, flag, switch, command, Arguments
 
 @arguments
 class BuildArguments:
