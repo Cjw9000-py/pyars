@@ -31,3 +31,12 @@ Running `BuildArgs.parse_args()` returns an instance populated from
 
 Refer to `example.py` for a full usage example.
 
+## Validation
+
+Containers perform a validation pass before parsing. Using mutually
+exclusive switches results in ``InvalidArgumentsError``:
+
+```python
+BuildArgs.parse_args(['proj', '--verbose', '--no-verbose'])
+```
+

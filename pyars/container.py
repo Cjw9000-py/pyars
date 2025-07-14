@@ -4,8 +4,13 @@ from __future__ import annotations
 
 from argparse import ArgumentParser, Namespace
 from typing import Iterable, Self, Callable
+import sys
 
 from attrs import define, fields, Attribute, NOTHING
+
+
+class InvalidArgumentsError(Exception):
+    """Raised when incompatible command line options are detected."""
 
 
 class ArgumentContainer:
@@ -44,6 +49,27 @@ class ArgumentContainer:
         return kwargs
 
     @classmethod
+    def pre_validate(cls, argv: list[str]) -> None:
+        """Validate ``argv`` before parsing and raise ``InvalidArgumentsError`` on conflicts."""
+        from .argument_types import SwitchArgument, CommandArgument
+
+        for field, argument in cls.get_arguments():
+            if isinstance(argument, SwitchArgument):
+                name = argument.name if argument.name is not None else argument.to_console_name(field.name)
+                enable_opt = f"--{name}"
+                disable_opt = f"--no-{name}"
+                if argument.enable and argument.disable and enable_opt in argv and disable_opt in argv:
+                    raise InvalidArgumentsError(
+                        f"{cls.__name__}: options {enable_opt} and {disable_opt} are mutually exclusive"
+                    )
+            elif isinstance(argument, CommandArgument):
+                for cmd_name, container_cls in argument.options.items():
+                    if cmd_name in argv:
+                        idx = argv.index(cmd_name)
+                        container_cls.pre_validate(argv[idx + 1 :])
+                        break
+
+    @classmethod
     def from_namespace(cls, prefix: str, namespace: Namespace) -> Self:
         """Instantiate ``cls`` using values extracted from ``namespace``."""
         return cls(**cls.namespace_to_dict(prefix, namespace))
@@ -52,9 +78,10 @@ class ArgumentContainer:
     def parse_args(cls, argv: list[str] | None = None) -> Self:
         """Parse ``argv`` and return an instance of ``cls``."""
         parser = cls.new_parser()
+        raw = sys.argv[1:] if argv is None else argv
+        cls.pre_validate(list(raw))
         namespace = parser.parse_args(argv)
-        instance = cls.from_namespace('', namespace)
-        return instance
+        return cls.from_namespace('', namespace)
 
 
 def arguments(outer_cls: type | None = None, **kwargs) -> type[ArgumentContainer] | Callable:
