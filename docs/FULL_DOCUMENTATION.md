@@ -52,3 +52,12 @@ args = parser.parse_args(['proj', '--debug'])
 The callback gets access to the parser instance so any additional options or
 settings remain active when parsing command lines.
 
+## Validation
+
+Containers perform a validation pass before parsing. Using mutually
+exclusive switches results in ``InvalidArgumentsError``:
+
+```python
+BuildArgs.parse_args(['proj', '--verbose', '--no-verbose'])
+```
+

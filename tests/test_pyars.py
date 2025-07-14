@@ -1,7 +1,8 @@
 from pathlib import Path
 from argparse import ArgumentParser
+import pytest
 
-from pyars import arguments, positional, flag, switch, command, Arguments
+from pyars import arguments, positional, flag, switch, command, Arguments, InvalidArgumentsError
 
 
 @arguments
@@ -94,3 +95,9 @@ def test_new_parser_callback_and_kwargs():
     namespace = parser.parse_args(['proj', '--extra'])
     assert captured[0] is parser
     assert namespace.extra is True
+    
+    
+def test_switch_conflict():
+    argv = ['proj', '--verbose', '--no-verbose']
+    with pytest.raises(InvalidArgumentsError):
+        BuildArguments.parse_args(argv)
