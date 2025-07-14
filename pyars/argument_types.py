@@ -9,13 +9,39 @@ values from a parsed :class:`argparse.Namespace`.
 """
 
 from pathlib import Path
-from types import GenericAlias, UnionType
-from typing import Callable
+from types import GenericAlias, SimpleNamespace, UnionType
+from typing import Callable, get_type_hints
 from argparse import ArgumentParser, Namespace
 from enum import Enum
 from distutils.util import strtobool
 import os
 from attrs import Attribute, NOTHING
+
+_ALLOWED_NAMES: dict[str, type] = {
+    'int': int,
+    'float': float,
+    'bool': bool,
+    'list': list,
+    'tuple': tuple,
+    'set': set,
+    'frozenset': frozenset,
+    'bytes': bytes,
+    'bytearray': bytearray,
+    'str': str,
+    'Path': Path,
+}
+
+
+def _resolve_annotation(annotation: str) -> type | Callable | None:
+    """Return a type object for ``annotation`` if allowed."""
+    if annotation in _ALLOWED_NAMES:
+        return _ALLOWED_NAMES[annotation]
+    try:
+        dummy = SimpleNamespace()
+        dummy.__annotations__ = {'v': annotation}
+        return get_type_hints(dummy, globalns=_ALLOWED_NAMES)['v']
+    except Exception:
+        return None
 
 from .container import ArgumentContainer
 
@@ -160,9 +186,8 @@ class ValueArgument(ArgumentType):
         elif not isinstance(attr.type, str):
             type_value = attr.type
         else:
-            try:
-                type_value = eval(attr.type, globals())
-            except Exception:
+            type_value = _resolve_annotation(attr.type)
+            if type_value is None:
                 type_value = self.guess_converter(attr.type)
 
         if isinstance(type_value, GenericAlias):
