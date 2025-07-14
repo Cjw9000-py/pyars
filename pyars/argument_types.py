@@ -1,5 +1,13 @@
 from __future__ import annotations
 
+"""Argument types used by :class:`pyars.ArgumentContainer`.
+
+This module contains small classes that describe how the command line should
+be parsed and mapped onto attrs based classes.  Each argument type exposes
+methods for extending :class:`argparse.ArgumentParser` and for extracting
+values from a parsed :class:`argparse.Namespace`.
+"""
+
 from pathlib import Path
 from types import GenericAlias, UnionType
 from typing import Callable
@@ -10,27 +18,44 @@ from .container import ArgumentContainer
 
 
 class ArgumentType:
-    """Base interface for argument behaviour."""
+    """Base interface that defines parsing behaviour for a single attribute."""
 
     @staticmethod
     def to_console_name(name: str) -> str:
+        """Convert an attribute name into a CLI-friendly option name."""
         return name.replace('_', '-')
 
     def get_converter(self, attr: Attribute) -> type | Callable | None:
+        """Return a callable that converts an argument value early during parsing."""
         return None
 
     def get_late_converter(self, attr: Attribute) -> type | Callable | None:
+        """Return a callable that converts an argument value after parsing."""
         return None
 
     def add_argument(self, prefix: str, attr: Attribute, parser: ArgumentParser):
+        """Add the CLI option for ``attr`` to ``parser``."""
         raise NotImplementedError
 
     def extract(self, prefix: str, attr: Attribute, namespace: Namespace):
+        """Extract a value for ``attr`` from ``namespace``."""
         raise NotImplementedError
 
 
 class CommandArgument(ArgumentType):
+    """Represents a sub-command argument selecting another :class:`ArgumentContainer`."""
+
     def __init__(self, extra: dict[str, type[ArgumentContainer]] | None = None, **kwargs: type[ArgumentContainer]):
+        """Create a command argument.
+
+        Parameters
+        ----------
+        extra:
+            Additional mapping of command name to container type.
+        **kwargs:
+            Each keyword defines a command name mapped to an ``ArgumentContainer`` subclass.
+        """
+
         extra = {} if extra is None else extra
         if isinstance(extra, type):
             raise TypeError(
@@ -53,23 +78,29 @@ class CommandArgument(ArgumentType):
         self.options: dict[str, type[ArgumentContainer]] = extra.copy()
 
     def add_argument(self, prefix: str, attr: Attribute, parser: ArgumentParser):
+        """Register sub-parsers for each possible command option."""
         subparsers = parser.add_subparsers(dest=prefix + attr.name)
         for name, option in self.options.items():
             subparser = subparsers.add_parser(name)
             option.add_arguments(f"{prefix}{attr.name}-", subparser)
 
     def extract(self, prefix: str, attr: Attribute, namespace: Namespace):
+        """Instantiate the selected command container from ``namespace``."""
         option = self.options[getattr(namespace, prefix + attr.name)]
         return option.from_namespace(f"{prefix}{attr.name}-", namespace)
 
 
 class ValueArgument(ArgumentType):
+    """Argument that holds one or more primitive values."""
+
     def __init__(self, nargs: str | None = None, type: type | Callable | None = None, help: str | None = None):  # noqa
+        """Create a value argument."""
         self.nargs = nargs
         self.type = type
         self.help = help
 
     def guess_converter(self, s: str) -> type | Callable | None:
+        """Best-effort guess for a converter based on a string annotation."""
         keywords = {
             'int': int,
             'float': float,
@@ -89,6 +120,7 @@ class ValueArgument(ArgumentType):
         return None
 
     def get_converter(self, attr: Attribute) -> type | Callable | None:
+        """Resolve the converter used during parsing."""
         type_value = None
         if self.type is not None:
             type_value = self.type
@@ -108,12 +140,15 @@ class ValueArgument(ArgumentType):
         return type_value
 
     def get_late_converter(self, attr: Attribute) -> type | Callable | None:
+        """Converter applied after parsing; defaults to ``None``."""
         return None
 
     def get_args(self, attr: Attribute) -> list[object]:
+        """Positional arguments for :func:`argparse.ArgumentParser.add_argument`."""
         return []
 
     def get_kwargs(self, prefix: str, attr: Attribute) -> dict[str, object]:
+        """Keyword arguments for :func:`argparse.ArgumentParser.add_argument`."""
         kwargs = {'dest': prefix + attr.name}
         if self.nargs is not None:
             kwargs['nargs'] = self.nargs
@@ -125,9 +160,11 @@ class ValueArgument(ArgumentType):
         return kwargs
 
     def add_argument(self, prefix: str, attr: Attribute, parser: ArgumentParser):
+        """Register a standard ``argparse`` option."""
         parser.add_argument(*self.get_args(attr), **self.get_kwargs(prefix, attr))
 
     def extract(self, prefix: str, attr: Attribute, namespace: Namespace):
+        """Extract and optionally convert the parsed value."""
         conv = self.get_late_converter(attr)
         if conv is None:
             conv = lambda x: x
@@ -135,6 +172,8 @@ class ValueArgument(ArgumentType):
 
 
 class PositionalArgument(ValueArgument):
+    """A value argument that is provided without a leading flag."""
+
     def get_converter(self, attr: Attribute) -> type | Callable | None:
         conv = super().get_converter(attr)
         if not hasattr(conv, '__iter__'):
@@ -154,7 +193,10 @@ class PositionalArgument(ValueArgument):
 
 
 class FlagArgument(ValueArgument):
+    """Named command line flag that yields a value."""
+
     def __init__(self, *opts: str, nargs: str | None = None, type: type | Callable | None = None, default: object = NOTHING, extra_opts: list[str] | set[str] | tuple[str] | str | None = None, help: str | None = None):  # noqa
+        """Create a flag argument."""
         super().__init__(nargs=nargs, type=type, help=help)
         self.default = default
         self.opts = opts
@@ -164,6 +206,7 @@ class FlagArgument(ValueArgument):
             self.extra_opts = None
 
     def get_console_names(self, attr: Attribute) -> set[str]:
+        """Return all console option names for ``attr``."""
         names: set[str] = set()
         if self.opts:
             names.update(self.opts)
@@ -175,11 +218,13 @@ class FlagArgument(ValueArgument):
         return formatted
 
     def get_args(self, attr: Attribute) -> list[object]:
+        """Include console option names alongside normal args."""
         args = super().get_args(attr)
         args.extend(self.get_console_names(attr))
         return args
 
     def get_kwargs(self, prefix: str, attr: Attribute) -> dict[str, object]:
+        """Keyword arguments including default handling."""
         kwargs = super().get_kwargs(prefix, attr)
         if self.default is not NOTHING:
             kwargs['default'] = self.default
@@ -190,7 +235,10 @@ class FlagArgument(ValueArgument):
 
 
 class SwitchArgument(ValueArgument):
+    """Boolean flag that supports ``--feature``/``--no-feature`` style switches."""
+
     def __init__(self, name: str | None = None, enable: bool = True, disable: bool = True, default: bool = False, help_suffix: str | None = None, help: str | None = None):  # noqa
+        """Create a switch argument."""
         super().__init__(help=help)
         self.name = name
         self.enable = enable
@@ -199,6 +247,7 @@ class SwitchArgument(ValueArgument):
         self.help_suffix = help_suffix
 
     def add_argument(self, prefix: str, attr: Attribute, parser: ArgumentParser):
+        """Register ``--flag`` and/or ``--no-flag`` options."""
         name = self.name if self.name is not None else self.to_console_name(attr.name)
         dest = f"{prefix}{attr.name}"
         if self.enable:
