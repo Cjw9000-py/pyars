@@ -16,10 +16,31 @@ class InvalidArgumentsError(Exception):
 class ArgumentContainer:
     """Mix-in providing ``argparse`` integration for attrs classes."""
     @classmethod
-    def new_parser(cls, *args, **kwargs) -> ArgumentParser:
-        """Return an ``ArgumentParser`` pre-configured for ``cls``."""
+    def new_parser(
+        cls,
+        *args,
+        callbacks: Callable[[ArgumentParser], None]
+        | Iterable[Callable[[ArgumentParser], None]]
+        | None = None,
+        **kwargs,
+    ) -> ArgumentParser:
+        """Return an ``ArgumentParser`` pre-configured for ``cls``.
+
+        Additional positional and keyword arguments are forwarded directly to
+        :class:`ArgumentParser`.  ``callbacks`` may be a single callable or an
+        iterable of callables that receive the created parser to perform further
+        customization.
+        """
+
         parser = ArgumentParser(*args, **kwargs)
         cls.add_arguments('', parser)
+
+        if callbacks is not None:
+            if callable(callbacks):
+                callbacks = (callbacks,)
+            for cb in callbacks:
+                cb(parser)
+
         return parser
 
     @classmethod
