@@ -23,10 +23,12 @@ class ArgumentContainer:
         from .argument_types import ArgumentType, PositionalArgument
         for field in fields(cls):
             argument = field.default
-            if field.default in (NOTHING, None, ...):
+            if field.default is NOTHING or field.default is ...:
                 argument = PositionalArgument()
             if not isinstance(argument, ArgumentType):
-                raise TypeError(f'Use a argument type as a default value, not {argument}')
+                raise TypeError(
+                    f'Use a argument type as a default value, not {argument!r}'
+                )
             yield field, argument
 
     @classmethod

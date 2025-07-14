@@ -33,7 +33,7 @@ def test_build_parse_defaults():
     argv = ['proj1']
     parsed = BuildArguments.parse_args(argv)
     assert parsed.projects == {'proj1'}
-    assert parsed.root == 'cwd'
+    assert parsed.root == Path('cwd')
     assert parsed.verbose is False
     assert parsed.parallel == 1
     assert parsed.colorize_output is False
@@ -79,3 +79,13 @@ def test_command_clean():
     parsed = ConsoleArguments.parse_args(argv)
     assert isinstance(parsed.command, CleanArguments)
     assert parsed.command.force is True
+
+
+@arguments
+class NoneDefaultArguments:
+    flag_arg: str | None = flag(default=None)
+
+
+def test_flag_default_none_optional():
+    parsed = NoneDefaultArguments.parse_args([])
+    assert parsed.flag_arg is None
