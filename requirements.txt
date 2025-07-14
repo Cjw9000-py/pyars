@@ -1,2 +1,2 @@
-attrs
-pytest
+attrs>=23.2
+pytest>=8.0
