@@ -22,7 +22,8 @@ You can also check the `example.py` in the root of the project.
 The usage is straightforward.
 
 ```python
-from pyars import *
+from pathlib import Path
+from pyars import arguments, positional, flag, switch, command, Arguments
 
 @arguments
 class BuildArguments:
