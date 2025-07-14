@@ -33,7 +33,7 @@ def test_build_parse_defaults():
     argv = ['proj1']
     parsed = BuildArguments.parse_args(argv)
     assert parsed.projects == {'proj1'}
-    assert parsed.root == 'cwd'
+    assert parsed.root == Path('cwd')
     assert parsed.verbose is False
     assert parsed.parallel == 1
     assert parsed.colorize_output is False
