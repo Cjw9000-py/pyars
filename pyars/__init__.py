@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .container import arguments, ArgumentContainer as Arguments
+from .container import arguments, ArgumentContainer as Arguments, InvalidArgumentsError
 from .argument_types import (
     CommandArgument as command,
     PositionalArgument as positional,
@@ -23,5 +23,6 @@ __all__ = [
     'enum',
     'list_argument',
     'Arguments',
+    'InvalidArgumentsError',
     'Path',
 ]
