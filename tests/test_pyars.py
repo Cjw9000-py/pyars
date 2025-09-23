@@ -74,3 +74,36 @@ def test_clean_command_flag():
     args = ConsoleArguments.parse_args(['ws', 'clean', '--force'])
     assert isinstance(args.command, CleanArguments)
     assert args.command.force is True
+
+
+def test_option_choices_enforced():
+    @arguments
+    class ModeArguments:
+        mode: str = option(choices=['dev', 'prod'])
+
+    parsed = ModeArguments.parse_args(['--mode', 'dev'])
+    assert parsed.mode == 'dev'
+
+    with pytest.raises(SystemExit):
+        ModeArguments.parse_args(['--mode', 'test'])
+
+
+def test_option_choices_respect_converter():
+    @arguments
+    class PathArguments:
+        location: Path = option(choices=['/tmp', '/var'], convert=Path)
+
+    parsed = PathArguments.parse_args(['--location', '/tmp'])
+    assert parsed.location == Path('/tmp')
+
+    with pytest.raises(SystemExit):
+        PathArguments.parse_args(['--location', '/bin'])
+
+
+def test_option_choices_accept_default():
+    @arguments
+    class DefaultArguments:
+        mode: str = option(choices=['dev', 'prod'], default='prod')
+
+    parsed = DefaultArguments.parse_args([])
+    assert parsed.mode == 'prod'
