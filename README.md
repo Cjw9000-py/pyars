@@ -1,4 +1,4 @@
-# pyars - a simple wrapper for argparse.
+# pyars - A simple wrapper for argparse.
 Packaging is managed with `pyproject.toml` (PEP 621). The only runtime dependency is [`attrs`](https://www.attrs.org/), installed automatically by `pip`.
 
 ## Installation
