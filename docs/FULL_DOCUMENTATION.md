@@ -11,13 +11,14 @@ argument descriptors which control how each attribute is parsed.
 Decorate your class with `@arguments` to enable parsing:
 
 ```python
-from pyars import arguments, positional, flag, switch, command
+from pathlib import Path
+from pyars import arguments, positional, option, flag, command
 
 @arguments
 class BuildArgs:
-    projects: set[str] = positional(nargs='+', help='Projects to build')
-    root: Path = flag(default='cwd')
-    verbose: bool = switch(help_suffix='verbose output')
+    targets: set[str] = positional(nargs='+', help='Targets to build')
+    root: Path = option('-r', convert=Path, default='.')
+    verbose: bool = flag('-v', help='Enable verbose output')
 ```
 
 Running `BuildArgs.parse_args()` returns an instance populated from
@@ -25,13 +26,13 @@ Running `BuildArgs.parse_args()` returns an instance populated from
 
 ## Argument Types
 
-* **positional** – creates a mandatory positional argument.
-* **flag** – standard option that accepts a value and may have defaults.
-* **switch** – boolean flag supporting ``--feature`` / ``--no-feature``.
+* **positional** – declare positional parameters. `nargs` and `convert` let you customise arity and type conversion.
+* **option** – named options that expect a value. When no names are supplied a `--long-name` is generated automatically; short options gain a matching long alias.
+* **flag** – boolean toggles that default to ``False`` and become ``True`` when present.
 * **command** – selects a sub-command implemented by another argument
   container.
 
-Refer to `example.py` for a full usage example.
+Refer to `example.py` or `new-spec.py` for a full usage example.
 
 ## Advanced Usage
 
@@ -56,10 +57,10 @@ settings remain active when parsing command lines.
 
 ## Validation
 
-Containers perform a validation pass before parsing. Using mutually
-exclusive switches results in ``InvalidArgumentsError``:
+Containers perform a validation pass before parsing. Choosing a sub-command is
+mandatory and nested commands are validated recursively.
 
 ```python
-BuildArgs.parse_args(['proj', '--verbose', '--no-verbose'])
+ConsoleArgs.parse_args(['proj'])  # SystemExit: the command is required
 ```
 

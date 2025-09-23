@@ -19,27 +19,34 @@ To run the test suite, install dependencies from `requirements.txt` and execute 
 
 ## Usage
 
-You can also check the `example.py` in the root of the project.
-The usage is straightforward.
+`pyars` lets you declare command line interfaces using classes decorated with `@arguments`. Use `positional`, `option`, `flag`, and `command` to describe the CLI surface.
 
 ```python
 from pathlib import Path
-from pyars import arguments, positional, flag, switch, command, Arguments
+from pyars import arguments, positional, option, flag, command, Arguments
 
 @arguments
 class BuildArguments:
-    projects: set[str] = positional(nargs='+', help="The projects you want to use")
-    root: Path = flag(extra_opts='--root-path', default='cwd', help="The root dir to use")
-    verbose: bool = switch(help_suffix="verbose output")
-    parallel: int = flag(nargs='?', type=int, default=1, help="Number of concurrent tasks to run")
-    colorize_output: bool = switch(name='colorize', help_suffix="colorized console output")
+    targets: set[str] = positional(nargs='+', help='Targets to compile')
+    root: Path = option('-r', convert=Path, default='.')
+    verbose: bool = flag('-v', help='Enable verbose output')
 
 
-if __name__ == "__main__":
-    parsed_args = BuildArguments.parse_args()
+@arguments
+class ConsoleArguments:
+    root: Path
+    command: Arguments = command(build=BuildArguments)
+
+
+if __name__ == '__main__':
+    parsed_args = ConsoleArguments.parse_args()
     print(parsed_args)
-
 ```
+
+* `positional` – declare positional parameters, supporting `nargs` and value conversion.
+* `option` – add named options accepting values; pass `convert=` to transform CLI input (and defaults).
+* `flag` – boolean toggles that default to `False` and become `True` when the flag is present. Short options automatically gain a `--long-name` alias derived from the attribute.
+* `command` – nest other `@arguments` containers as sub-commands.
 
 ## Contributing
 
@@ -51,8 +58,8 @@ pytest
 
 ### Validation
 
-Providing conflicting switches raises an ``InvalidArgumentsError``:
+Containers perform a validation pass before parsing. Sub-commands are required and validated recursively:
 
 ```python
-BuildArguments.parse_args(['proj', '--verbose', '--no-verbose'])
+ConsoleArguments.parse_args(['workspace'])  # raises SystemExit because no command is chosen
 ```

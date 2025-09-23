@@ -1,14 +1,14 @@
 from __future__ import annotations
 from pathlib import Path
 
-from pyars import arguments, positional, flag, switch
+from pyars import arguments, positional, option, flag
 
 
 @arguments
 class StringArgs:
     value: 'Path'
-    count: 'int' = flag()
-    verbose: 'bool' = switch()
+    count: 'int' = option('--count')
+    verbose: 'bool' = flag()
 
 
 def test_string_annotations_parsing():
@@ -21,7 +21,7 @@ def test_string_annotations_parsing():
 
 @arguments
 class UnknownArgs:
-    stuff: 'Unknown'
+    stuff: 'Unknown' = positional()
 
 
 def test_unknown_annotation_graceful():
@@ -31,11 +31,11 @@ def test_unknown_annotation_graceful():
 
 
 @arguments
-class GenericArgs:
-    names: 'list[str]' = positional(nargs='+')
+class CollectionArgs:
+    names: 'set[str]' = positional(nargs='+')
 
 
-def test_generic_string_annotation():
+def test_collection_annotation():
     argv = ['a', 'b']
-    parsed = GenericArgs.parse_args(argv)
-    assert parsed.names == ['a', 'b']
+    parsed = CollectionArgs.parse_args(argv)
+    assert parsed.names == {'a', 'b'}
