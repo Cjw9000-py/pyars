@@ -4,6 +4,10 @@ from pathlib import Path
 from pyars import arguments, positional, option, flag
 
 
+class Unknown(str):
+    """Sentinel type used to exercise forward reference handling."""
+
+
 @arguments
 class StringArgs:
     value: 'Path'
