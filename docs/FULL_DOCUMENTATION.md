@@ -27,12 +27,31 @@ Running `BuildArgs.parse_args()` returns an instance populated from
 ## Argument Types
 
 * **positional** – declare positional parameters. `nargs` and `convert` let you customise arity and type conversion.
-* **option** – named options that expect a value. When no names are supplied a `--long-name` is generated automatically; short options gain a matching long alias.
+* **option** – named options that expect a value. Values pass through the option's `convert` callable before validation, so `choices` should contain the converted representation (for example, `Path` instances rather than strings). When no names are supplied a `--long-name` is generated automatically; supplying only short names still gains a long alias. Providing a `default` marks the option as optional (`required=False`) even when not specified explicitly.
 * **flag** – boolean toggles that default to ``False`` and become ``True`` when present.
 * **command** – selects a sub-command implemented by another argument
   container.
 
 Refer to `example.py` or `new-spec.py` for a full usage example.
+
+### Automatic Long Alias Example
+
+Supplying only a short option name still provides a derived long alias:
+
+```python
+@arguments
+class ServeArgs:
+    port: int = option('-p', convert=int, help='Port to bind')
+
+ServeArgs.parse_args(['--port', '8080'])
+```
+
+On the command line this enables either form:
+
+```bash
+python app.py -p 8080
+python app.py --port 8080
+```
 
 ## Advanced Usage
 
