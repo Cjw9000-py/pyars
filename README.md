@@ -44,7 +44,7 @@ if __name__ == '__main__':
 ```
 
 * `positional` – declare positional parameters, supporting `nargs` and value conversion.
-* `option` – add named options accepting values; pass `convert=` to transform CLI input (and defaults).
+* `option` – add named options accepting values; `convert=` runs on CLI input and defaults before `choices` are validated, so define choices using the converted values. Short-only definitions still receive an automatic `--long-name` alias, and providing a `default` automatically sets `required=False`.
 * `flag` – boolean toggles that default to `False` and become `True` when the flag is present. Short options automatically gain a `--long-name` alias derived from the attribute.
 * `command` – nest other `@arguments` containers as sub-commands.
 
